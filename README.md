@@ -1,6 +1,6 @@
 # BlackBox
 
-BlackBox is a native macOS terminal app with an AI assistant for local command-line tasks and remote SSH troubleshooting, supporting OpenAI, Anthropic, and OpenRouter with configurable command approvals.
+BlackBox is a native macOS terminal app with an AI assistant for local command-line tasks and remote SSH, supporting OpenAI, Anthropic, and OpenRouter with configurable command approvals.
 
 ## Install
 
