@@ -2,6 +2,10 @@
 
 BlackBox is a native macOS terminal app with an AI assistant for local command-line tasks and remote SSH, supporting OpenAI, Anthropic, and OpenRouter with configurable command approvals.
 
+![BlackBox assisting with Linux firewall configuration over SSH](docs/images/blackbox-firewall-demo.png)
+
+*Illustrative demo with fictional host details.*
+
 ## Install
 
 Download the latest app from [GitHub Releases](https://github.com/mingistech/BlackBox/releases), unzip it, and drag BlackBox into Applications. Version 1.0 requires **macOS 26.6 or later** and supports Apple silicon and Intel Macs. Bring your own OpenRouter, OpenAI, or Anthropic API key; provider usage is billed separately.
