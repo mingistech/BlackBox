@@ -10,6 +10,10 @@ BlackBox is a native macOS terminal app with an AI assistant for local command-l
 
 Download the latest app from [GitHub Releases](https://github.com/mingistech/BlackBox/releases), unzip it, and drag BlackBox into Applications. Version 1.0 requires **macOS 26.6 or later** and supports Apple silicon and Intel Macs. Bring your own OpenRouter, OpenAI, or Anthropic API key; provider usage is billed separately.
 
+## Updates
+
+Choose **BlackBox → Check for Updates…** to check the latest stable GitHub release. BlackBox also checks at launch when the last successful check was at least seven days ago. Automatic checks stay quiet when no update is available or the network is unavailable. When a newer version exists, **Open Release Page** takes you to GitHub to download it; updates are not installed automatically. Checks request public release metadata only, without API keys, terminal output, or conversation history.
+
 ## Build and run
 
 Open `BlackBox.xcodeproj` in Xcode, select the BlackBox scheme, and Run. The existing project deployment target is macOS 26.6. No package downloads are needed: SwiftTerm is pinned and vendored.
@@ -25,7 +29,7 @@ The model button beside Send lets you select a provider and model. The OpenRoute
 
 ## Modes
 
-- **Manual:** the assistant can read terminal output and state; all writes are blocked in code, even if a model requests them.
+- **Observe mode:** the assistant can read terminal output and state; all writes are blocked in code, even if a model requests them.
 - **Ask Before Command:** terminal writes, keys, and interrupts need approval. Approving command text also covers its immediate Return, provided the terminal has not changed. Other mutations and terminal changes invalidate that continuation approval.
 - **Autonomous:** the assistant can act in the same terminal without confirmation. Password entry and SSH host-key confirmation still require you.
 
@@ -70,7 +74,7 @@ cat /tmp/blackbox-smoke-results.txt
 
 The unit tests include provider endpoint/header isolation, Responses function-call IDs and encrypted reasoning, Anthropic signed thinking and grouped tool results, empty/truncated responses, preference/favorite isolation, the OpenAI and Anthropic shortlists, pagination, and cache isolation. Direct-provider tests use intercepted HTTP fixtures; live OpenAI and Anthropic account access must be checked with your keys using **Test Connection**.
 
-`--smoke-test` is Debug-only. It opens a real PTY, runs local test commands, and replaces HTTP with a URLProtocol fixture: no API key or external model calls. It tests the tool round trip, approval/denial, enforced Manual mode, Autonomous mode, cancellation, Ctrl-C, secret injection, and a loopback SSH connection error. It quits the app after writing its report.
+`--smoke-test` is Debug-only. It opens a real PTY, runs local test commands, and replaces HTTP with a URLProtocol fixture: no API key or external model calls. It tests the tool round trip, approval/denial, enforced Observe mode, Autonomous mode, cancellation, Ctrl-C, secret injection, and a loopback SSH connection error. It quits the app after writing its report.
 
 The OpenRouter request was verified against live Qwen3 Coder on September 19, 2026: the original request reproduced HTTP 404 and the corrected request returned a response. The cause was requiring support for `parallel_tool_calls`, which none of the available Qwen providers advertised. That optional parameter is now omitted; tool execution remains sequential and approval-controlled locally. Regression tests exercise the actual outgoing request and distinguish provider/parameter failures from account data-policy failures without displaying raw server metadata.
 

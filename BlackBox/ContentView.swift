@@ -83,12 +83,18 @@ struct WorkspaceView: View {
                     .pickerStyle(.inline)
                     .labelsHidden()
                 } label: {
-                    Text(agent.mode.rawValue)
-                        .padding(.horizontal, 6)
+                    ZStack {
+                        // Reserve the longest label's width in every mode.
+                        ForEach(AgentMode.allCases) { mode in
+                            Text(mode.rawValue).hidden().accessibilityHidden(true)
+                        }
+                        Text(agent.mode.rawValue)
+                    }
+                    .padding(.horizontal, 8)
                 }
                 .fixedSize(horizontal: true, vertical: false)
                 .accessibilityLabel("Agent Mode: \(agent.mode.rawValue)")
-                .help("Manual: read only. Ask: approve each action. Autonomous: act without approval.")
+                .help("Observe mode: read only. Ask: approve each action. Autonomous: act without approval.")
             }
             ToolbarItem { Button { openSettings() } label: { Image(systemName: "gearshape") }.help("AI providers and API keys") }
         }

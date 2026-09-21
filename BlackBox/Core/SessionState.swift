@@ -1,7 +1,7 @@
 import Foundation
 
 enum AgentMode: String, CaseIterable, Identifiable {
-    case manual = "Manual"
+    case manual = "Observe mode"
     case ask = "Ask Before Command"
     case autonomous = "Autonomous"
     var id: String { rawValue }

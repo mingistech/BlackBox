@@ -122,10 +122,10 @@ enum SmokeTests {
             try check(sawResult && !terminal.snapshot().contains("DENIED_UNEXPECTED"), "Denied tool never executes")
 
             agent.clear(); agent.mode = .manual
-            setResponse(command: "printf 'MANUAL_%s\\n' 'UNEXPECTED'\n", expectedResult: "Manual mode")
+            setResponse(command: "printf 'MANUAL_%s\\n' 'UNEXPECTED'\n", expectedResult: "Observe mode")
             agent.submit("Test malformed model write in manual mode")
             try await awaitAgent(approval: nil)
-            try check(sawResult && !terminal.snapshot().contains("MANUAL_UNEXPECTED"), "Manual mode rejects writes even if the model requests one")
+            try check(sawResult && !terminal.snapshot().contains("MANUAL_UNEXPECTED"), "Observe mode rejects writes even if the model requests one")
 
             agent.clear(); agent.mode = .autonomous
             setResponse(command: "printf 'AUTO_%s\\n' 'OK'\n", expectedResult: "AUTO_OK")

@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct BlackBoxApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @StateObject private var updates = UpdateChecker()
     @StateObject private var workspace: Workspace
 
     init() {
@@ -12,11 +13,19 @@ struct BlackBoxApp: App {
     var body: some Scene {
         Window("BlackBox", id: "workspace") {
             ContentView(workspace: workspace)
+                .modifier(UpdateNoticePresenter(checker: updates))
+                .task {
+                    #if DEBUG
+                    guard !ProcessInfo.processInfo.arguments.contains("--smoke-test") else { return }
+                    #endif
+                    await updates.check(automatically: true)
+                }
         }
         .defaultSize(width: 1180, height: 760)
         .commands {
             CommandGroup(replacing: .newItem) {}
             AboutCommands()
+            UpdateCommands(checker: updates)
         }
 
         Settings {
