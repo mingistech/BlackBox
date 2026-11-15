@@ -53,15 +53,15 @@ final class ProviderCatalogTests: XCTestCase {
             XCTAssertEqual(query?.first { $0.name == "limit" }?.value, "1000")
             if requests == 1 {
                 XCTAssertNil(query?.first { $0.name == "after_id" })
-                return (200, ["data": [["id": "claude-sonnet-5", "display_name": "Claude Sonnet 5"]], "has_more": true, "last_id": "claude-sonnet-5"])
+                return (200, ["data": [["id": "claude-sonnet-5-5", "display_name": "Claude Sonnet 5.5"]], "has_more": true, "last_id": "claude-sonnet-5-5"])
             }
-            XCTAssertEqual(query?.first { $0.name == "after_id" }?.value, "claude-sonnet-5")
-            return (200, ["data": [["id": "claude-opus-5", "display_name": "Claude Opus 5"], ["id": "claude-sonnet-5", "display_name": "Claude Sonnet 5"]], "has_more": false])
+            XCTAssertEqual(query?.first { $0.name == "after_id" }?.value, "claude-sonnet-5-5")
+            return (200, ["data": [["id": "claude-opus-5-5", "display_name": "Claude Opus 5.5"], ["id": "claude-sonnet-5-5", "display_name": "Claude Sonnet 5.5"]], "has_more": false])
         }
         let models = try await ProviderModelCatalogClient(session: session).fetch(provider: .anthropic, key: "fixture-anthropic")
         XCTAssertEqual(requests, 2)
         XCTAssertEqual(models.count, 2)
-        XCTAssertEqual(models.first { $0.id == "claude-opus-5" }?.name, "Claude Opus 5")
+        XCTAssertEqual(models.first { $0.id == "claude-opus-5-5" }?.name, "Claude Opus 5.5")
     }
 
     func testRepeatedPaginationCursorFailsInsteadOfLoopingForever() async {
@@ -81,17 +81,17 @@ final class ProviderCatalogTests: XCTestCase {
         let suite = "OpenAIShortlistTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
-        let expected = ["gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"]
+        let expected = ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"]
         let models = [OpenRouterModel(id: "gpt-6-astra", name: "Astra"), OpenRouterModel(id: "gpt-4.1-mini", name: "Mini")]
         let catalog = ModelCatalog(defaults: defaults, provider: .openAI, fetchModels: { models })
         XCTAssertEqual(catalog.choices(selected: "gpt-6-astra", search: "").map(\.id), expected)
         await catalog.refresh()
         catalog.toggleFavorite("gpt-4.1-mini")
         XCTAssertEqual(catalog.choices(selected: "gpt-4.1-mini", search: "", showAll: true).map(\.id), expected)
-        catalog.toggleFavorite("gpt-5.6-luna")
-        let starredOrder = ["gpt-5.6-luna"] + expected.filter { $0 != "gpt-5.6-luna" }
+        catalog.toggleFavorite("gpt-6-luna")
+        let starredOrder = ["gpt-6-luna"] + expected.filter { $0 != "gpt-6-luna" }
         XCTAssertEqual(catalog.choices(selected: "gpt-6-astra", search: "").map(\.id), starredOrder)
-        XCTAssertEqual(catalog.choices(selected: "gpt-6-astra", search: "terra").map(\.id), ["gpt-5.6-terra"])
+        XCTAssertEqual(catalog.choices(selected: "gpt-6-astra", search: "terra").map(\.id), ["gpt-6.1-terra"])
         let offline = ModelCatalog(defaults: defaults, provider: .openAI, fetchModels: { throw URLError(.notConnectedToInternet) })
         await offline.refresh()
         XCTAssertNotNil(offline.error)
@@ -103,23 +103,23 @@ final class ProviderCatalogTests: XCTestCase {
         let suite = "NativeCatalogTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
-        let models = [OpenRouterModel(id: "claude-sonnet-5", name: "Sonnet"), OpenRouterModel(id: "claude-other", name: "Other")]
+        let models = [OpenRouterModel(id: "claude-sonnet-5-5", name: "Sonnet"), OpenRouterModel(id: "claude-other", name: "Other")]
         let catalog = ModelCatalog(defaults: defaults, provider: .anthropic, fetchModels: { models })
-        let expected = ["claude-sonnet-5", "claude-fable-5-1", "claude-opus-5", "claude-haiku-4-5"]
-        XCTAssertEqual(catalog.choices(selected: "claude-sonnet-5", search: "").map(\.id), expected)
+        let expected = ["claude-sonnet-5-5", "claude-fable-5-2", "claude-opus-5-5", "claude-haiku-5-5"]
+        XCTAssertEqual(catalog.choices(selected: "claude-sonnet-5-5", search: "").map(\.id), expected)
         await catalog.refresh()
         catalog.toggleFavorite("claude-other")
         XCTAssertEqual(catalog.choices(selected: "claude-other", search: "", showAll: true).map(\.id), expected)
-        catalog.toggleFavorite("claude-haiku-4-5")
-        XCTAssertEqual(catalog.choices(selected: "claude-sonnet-5", search: "").map(\.id), ["claude-haiku-4-5", "claude-sonnet-5", "claude-fable-5-1", "claude-opus-5"])
+        catalog.toggleFavorite("claude-haiku-5-5")
+        XCTAssertEqual(catalog.choices(selected: "claude-sonnet-5-5", search: "").map(\.id), ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-fable-5-2", "claude-opus-5-5"])
         let offline = ModelCatalog(defaults: defaults, provider: .anthropic, fetchModels: { throw URLError(.notConnectedToInternet) })
         await offline.refresh()
         XCTAssertNotNil(offline.error)
         XCTAssertEqual(offline.models, models)
         XCTAssertTrue(ModelCatalog(defaults: defaults, provider: .openAI).models.isEmpty)
         XCTAssertTrue(offline.choices(selected: "custom-model", search: "custom").isEmpty)
-        XCTAssertEqual(offline.choices(selected: "custom-model", search: "").map(\.id), ["claude-haiku-4-5", "claude-sonnet-5", "claude-fable-5-1", "claude-opus-5"])
-        XCTAssertEqual(offline.choices(selected: "claude-sonnet-5", search: "fable").map(\.id), ["claude-fable-5-1"])
+        XCTAssertEqual(offline.choices(selected: "custom-model", search: "").map(\.id), ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-fable-5-2", "claude-opus-5-5"])
+        XCTAssertEqual(offline.choices(selected: "claude-sonnet-5-5", search: "fable").map(\.id), ["claude-fable-5-2"])
     }
 
     func testMissingKeyDoesNotSendRequestAndProviderErrorDoesNotLeakData() async {

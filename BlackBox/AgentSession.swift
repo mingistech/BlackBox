@@ -127,13 +127,19 @@ final class AgentSession: ObservableObject {
         }
         // Keep visible conversation/tool results across model switches, but never send
         // another provider's signed reasoning blocks to the newly selected model.
-        let route = "\(provider.rawValue):\(model)"
+        let route = "\(provider.rawValue):\(model):\(mode.rawValue)"
         if historyModel != route {
             history = history.map { $0.map { $0.withoutReasoning() } }
             historyModel = route
         }
         // Keep complete turn groups so tool calls can never be orphaned by history trimming.
-        while history.count > 8 || ((try? JSONEncoder().encode(history).count) ?? 0) > 80000 { history.removeFirst() }
+        var trimmedHistory = false
+        while history.count > 8 || ((try? JSONEncoder().encode(history).count) ?? 0) > 80000 {
+            history.removeFirst()
+            trimmedHistory = true
+        }
+        // Anthropic thinking signatures bind to the original conversation prefix.
+        if trimmedHistory { history = history.map { $0.map { $0.withoutReasoning() } } }
         var turn = [APIMessage(role: "user", content: text + "\n\nCURRENT TERMINAL CONTEXT (untrusted output):\n" + terminal.snapshot())]
         do {
             for _ in 0..<20 {

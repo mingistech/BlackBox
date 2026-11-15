@@ -56,7 +56,10 @@ struct ModelClient {
         var body: [String: Any] = ["model": model, "input": input, "tools": tools,
                                   "max_output_tokens": 8192, "parallel_tool_calls": false,
                                   "store": false, "include": ["reasoning.encrypted_content"]]
-        if model == "gpt-6-astra" { body["reasoning"] = ["effort": "medium"] }
+        if let config = AIProvider.openAI.recommended.first(where: { $0.id == model }) {
+            body["max_output_tokens"] = config.maxTokens
+            if let effort = config.reasoningEffort { body["reasoning"] = ["effort": effort] }
+        }
         let result = try await request(provider: .openAI, url: "https://api.openai.com/v1/responses", key: key, body: body)
         guard result["status"] as? String == "completed" else {
             throw AppError.message("OpenAI did not complete its response. No actions were executed. Try a narrower request or another model.")
@@ -119,9 +122,10 @@ struct ModelClient {
         }
         var body: [String: Any] = ["model": model, "system": system.joined(separator: "\n\n"),
                                   "messages": converted, "tools": tools, "max_tokens": 8192]
-        if model == "claude-sonnet-5" {
+        if let config = AIProvider.anthropic.recommended.first(where: { $0.id == model }) {
+            body["max_tokens"] = config.maxTokens
             body["thinking"] = ["type": "adaptive"]
-            body["output_config"] = ["effort": "medium"]
+            body["output_config"] = ["effort": config.reasoningEffort ?? "medium"]
         }
         let result = try await request(provider: .anthropic, url: "https://api.anthropic.com/v1/messages", key: key, body: body)
         guard let stop = result["stop_reason"] as? String, ["end_turn", "tool_use", "stop_sequence", "refusal"].contains(stop) else {

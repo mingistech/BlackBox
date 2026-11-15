@@ -29,12 +29,18 @@ struct SettingsView: View {
                 }.disabled(agent.isBusy)
                 ProviderStatusLabel(configured: agent.configuredProviders.contains(agent.provider))
             }
-            HStack {
-                TextField("Model ID for \(agent.provider.name)", text: $model)
-                    .onSubmit(saveModel)
-                    .disabled(agent.isBusy)
-                Button("Use model", action: saveModel)
-                    .disabled(agent.isBusy || model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model == agent.model)
+            if agent.provider == .openRouter {
+                HStack {
+                    TextField("Model ID for \(agent.provider.name)", text: $model)
+                        .onSubmit(saveModel)
+                        .disabled(agent.isBusy)
+                    Button("Use model", action: saveModel)
+                        .disabled(agent.isBusy || model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model == agent.model)
+                }
+            } else {
+                Picker("Model", selection: $agent.model) {
+                    ForEach(agent.provider.recommended) { Text($0.name).tag($0.id) }
+                }.disabled(agent.isBusy)
             }
             Text("Current: \(agent.provider.name) · \(agent.model)").font(.caption).foregroundStyle(.secondary)
             Divider()

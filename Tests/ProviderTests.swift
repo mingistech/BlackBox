@@ -50,7 +50,7 @@ final class ProviderTests: XCTestCase {
         defaults.set("openAI", forKey: "aiProvider")
         XCTAssertEqual(AIProvider.selected(defaults: defaults), .openAI)
         XCTAssertEqual(AIProvider.openAI.selectedModel(defaults: defaults), "gpt-6-astra")
-        XCTAssertEqual(AIProvider.anthropic.selectedModel(defaults: defaults), "claude-sonnet-5")
+        XCTAssertEqual(AIProvider.anthropic.selectedModel(defaults: defaults), "claude-sonnet-5-5")
         XCTAssertEqual(AIProvider.openRouter.selectedModel(defaults: defaults), "custom/router")
         XCTAssertEqual(AIProvider.openRouter.keychainService, "BlackBox.OpenRouter")
         XCTAssertEqual(Set(AIProvider.allCases.map(\.keychainService)).count, 3)
@@ -65,11 +65,11 @@ final class ProviderTests: XCTestCase {
         let direct = ModelCatalog(defaults: defaults, provider: .openAI, fetchModels: { [OpenRouterModel(id: "gpt-6-astra", name: "Astra"), OpenRouterModel(id: "gpt-4.1", name: "GPT 4.1")] })
         await direct.refresh()
         XCTAssertTrue(direct.favorites.isEmpty)
-        XCTAssertEqual(direct.choices(selected: "gpt-6-astra", search: "").map(\.id), ["gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"])
+        XCTAssertEqual(direct.choices(selected: "gpt-6-astra", search: "").map(\.id), ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"])
         direct.toggleFavorite("gpt-6-astra")
         XCTAssertEqual(router.favorites, ["openai/gpt-6-astra"])
         XCTAssertEqual(ModelCatalog(defaults: defaults, provider: .openAI).favorites, ["gpt-6-astra"])
-        XCTAssertEqual(ModelCatalog(defaults: defaults, provider: .anthropic).choices(selected: "claude-sonnet-5", search: "").map(\.id), ["claude-sonnet-5", "claude-fable-5-1", "claude-opus-5", "claude-haiku-4-5"])
+        XCTAssertEqual(ModelCatalog(defaults: defaults, provider: .anthropic).choices(selected: "claude-sonnet-5-5", search: "").map(\.id), ["claude-sonnet-5-5", "claude-fable-5-2", "claude-opus-5-5", "claude-haiku-5-5"])
     }
 
     func testOpenAIResponsesRoundTripPreservesEncryptedReasoningAndCallID() async throws {
@@ -132,10 +132,10 @@ final class ProviderTests: XCTestCase {
             return (200, ["stop_reason": "end_turn", "content": [["type": "text", "text": "Verified."]]])
         }
         let messages = [APIMessage(role: "system", content: "System"), APIMessage(role: "user", content: "Check")]
-        let first = try await client.complete(provider: .anthropic, key: "anthropic-test", model: "claude-sonnet-5", messages: messages, mode: .manual)
+        let first = try await client.complete(provider: .anthropic, key: "anthropic-test", model: "claude-sonnet-5-5", messages: messages, mode: .manual)
         XCTAssertFalse((first.content ?? "").contains("private-thinking"))
         let results = [APIMessage(role: "tool", content: "output", tool_call_id: "toolu_1"), APIMessage(role: "tool", content: "local", tool_call_id: "toolu_2")]
-        let final = try await client.complete(provider: .anthropic, key: "anthropic-test", model: "claude-sonnet-5", messages: messages + [first] + results, mode: .manual)
+        let final = try await client.complete(provider: .anthropic, key: "anthropic-test", model: "claude-sonnet-5-5", messages: messages + [first] + results, mode: .manual)
         XCTAssertEqual(final.content, "Verified.")
     }
 
@@ -152,7 +152,7 @@ final class ProviderTests: XCTestCase {
             XCTAssertTrue(text.contains("call_old"))
             return (200, ["stop_reason": "end_turn", "content": [["type": "text", "text": "OK"]]])
         }
-        _ = try await client.complete(provider: .anthropic, key: "test", model: "claude-sonnet-5", messages: [APIMessage(role: "user", content: "Check"), switched, APIMessage(role: "tool", content: "Result", tool_call_id: "call_old"), APIMessage(role: "user", content: "Continue")], mode: .ask)
+        _ = try await client.complete(provider: .anthropic, key: "test", model: "claude-sonnet-5-5", messages: [APIMessage(role: "user", content: "Check"), switched, APIMessage(role: "tool", content: "Result", tool_call_id: "call_old"), APIMessage(role: "user", content: "Continue")], mode: .ask)
     }
 
     func testRouterRouteUsesOnlyRouterEndpointAndAuthentication() async throws {
@@ -193,6 +193,61 @@ final class ProviderTests: XCTestCase {
                 XCTAssertTrue(error.localizedDescription.contains(provider.name))
                 XCTAssertTrue(error.localizedDescription.contains("key was rejected"))
                 XCTAssertFalse(error.localizedDescription.contains("SECRET"))
+            }
+        }
+    }
+}
+
+extension ProviderTests {
+    func testCoreModelPreferenceMigration() {
+        let suite = "CoreModelMigration.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("gpt-5.6-sol", forKey: "openAIModel")
+        defaults.set("claude-fable-5-1", forKey: "anthropicModel")
+        XCTAssertEqual(AIProvider.openAI.selectedModel(defaults: defaults), "gpt-6.1-sol")
+        XCTAssertEqual(AIProvider.anthropic.selectedModel(defaults: defaults), "claude-fable-5-2")
+        defaults.set("custom-model", forKey: "openAIModel")
+        XCTAssertEqual(AIProvider.openAI.selectedModel(defaults: defaults), "gpt-6-astra")
+        defaults.set("custom/router", forKey: "openRouterModel")
+        XCTAssertEqual(AIProvider.openRouter.selectedModel(defaults: defaults), "custom/router")
+    }
+
+    func testEveryCoreModelUsesCompatibleRequestAndToolContinuation() async throws {
+        for provider in [AIProvider.openAI, .anthropic] {
+            for model in provider.recommended {
+                var count = 0
+                ProviderURLProtocol.handler = { request, body in
+                    count += 1
+                    XCTAssertEqual(body["model"] as? String, model.id)
+                    XCTAssertNil(body["temperature"])
+                    XCTAssertNil(body["tool_choice"])
+                    if provider == .openAI {
+                        XCTAssertEqual((body["reasoning"] as? [String: String])?["effort"], "medium")
+                        XCTAssertEqual(body["store"] as? Bool, false)
+                        if count == 1 {
+                            return (200, ["status": "completed", "output": [["type": "function_call", "call_id": "core-call", "name": "read_terminal", "arguments": "{}"]]])
+                        }
+                        let input = body["input"] as? [[String: Any]]
+                        XCTAssertEqual(input?.last?["call_id"] as? String, "core-call")
+                        return (200, ["status": "completed", "output": [["type": "message", "content": [["type": "output_text", "text": "Verified"]]]]])
+                    }
+                    XCTAssertEqual((body["thinking"] as? [String: String])?["type"], "adaptive")
+                    XCTAssertEqual((body["output_config"] as? [String: String])?["effort"], "medium")
+                    if count == 1 {
+                        return (200, ["stop_reason": "tool_use", "content": [["type": "thinking", "thinking": "fixture", "signature": "signed"], ["type": "tool_use", "id": "core-call", "name": "read_terminal", "input": [:]]]])
+                    }
+                    let messages = body["messages"] as? [[String: Any]]
+                    let blocks = messages?.last?["content"] as? [[String: Any]]
+                    XCTAssertEqual(blocks?.first?["tool_use_id"] as? String, "core-call")
+                    return (200, ["stop_reason": "end_turn", "content": [["type": "text", "text": "Verified"]]])
+                }
+                let messages = [APIMessage(role: "system", content: "Fixture"), APIMessage(role: "user", content: "Inspect")]
+                let first = try await client.complete(provider: provider, key: "fixture", model: model.id, messages: messages, mode: .ask)
+                XCTAssertEqual(first.tool_calls?.first?.id, "core-call")
+                let reply = try await client.complete(provider: provider, key: "fixture", model: model.id,
+                    messages: messages + [first, APIMessage(role: "tool", content: "terminal fixture", tool_call_id: "core-call")], mode: .ask)
+                XCTAssertEqual(reply.content, "Verified")
             }
         }
     }

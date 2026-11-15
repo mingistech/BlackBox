@@ -41,9 +41,11 @@ final class ModelCatalog: ObservableObject {
         self.defaults = defaults
         self.provider = provider
         self.fetchModels = fetchModels ?? { try await ProviderModelCatalogClient().fetch(provider: provider) }
-        favorites = Set(defaults.stringArray(forKey: provider == .openRouter ? "openRouterFavoriteModels" : "\(provider.rawValue)FavoriteModels") ?? [])
+        let key = provider == .openRouter ? "openRouterFavoriteModels" : "\(provider.rawValue)FavoriteModels"
+        favorites = Set((defaults.stringArray(forKey: key) ?? []).compactMap { provider.supportedModel($0) })
         models = defaults.data(forKey: provider.modelCatalogCacheKey)
             .flatMap { try? JSONDecoder().decode([OpenRouterModel].self, from: $0) } ?? []
+        defaults.set(favorites.sorted(), forKey: key)
     }
 
     func toggleFavorite(_ id: String) {
