@@ -14,6 +14,7 @@ struct BlackBoxApp: App {
         Window("BlackBox", id: "workspace") {
             ContentView(workspace: workspace)
                 .modifier(UpdateNoticePresenter(checker: updates))
+                .modifier(PortableLaunchPresenter(agent: workspace.agent))
                 .task {
                     #if DEBUG
                     guard !ProcessInfo.processInfo.arguments.contains("--smoke-test") else { return }
@@ -32,6 +33,13 @@ struct BlackBoxApp: App {
             SettingsView(agent: workspace.agent)
         }
         .windowResizability(.contentSize)
+
+        Window("Portable API Keys", id: "portable-keys") {
+            PortableKeysView(agent: workspace.agent)
+        }
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
 
         Window("About BlackBox", id: "about") {
             AboutView()

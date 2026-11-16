@@ -11,10 +11,10 @@ struct RecommendedModel: Identifiable {
 enum RecommendedModels {
     static let defaultID = "qwen/qwen3-coder"
     static let all: [RecommendedModel] = [
-        .init(id: defaultID, name: "Qwen3 Coder", role: "Everyday · Default", maxTokens: 4096, reasoningEffort: nil),
-        .init(id: "anthropic/claude-sonnet-5", name: "Sonnet 5", role: "Everyday · Troubleshooting", maxTokens: 4096, reasoningEffort: "medium"),
-        .init(id: "deepseek/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", role: "Economy · Quick checks", maxTokens: 4096, reasoningEffort: "low"),
-        .init(id: "openai/gpt-6-astra", name: "GPT-6 Astra", role: "Deep analysis", maxTokens: 8192, reasoningEffort: "medium")
+        .init(id: defaultID, name: "Qwen3 Coder", role: "Everyday coding · Default", maxTokens: 4096, reasoningEffort: nil),
+        .init(id: "anthropic/claude-sonnet-5", name: "Sonnet 5", role: "Everyday tasks and troubleshooting", maxTokens: 4096, reasoningEffort: "medium"),
+        .init(id: "deepseek/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", role: "Quick checks and lower cost", maxTokens: 4096, reasoningEffort: "low"),
+        .init(id: "openai/gpt-6-astra", name: "GPT-6 Astra", role: "Hard problems and deep troubleshooting", maxTokens: 8192, reasoningEffort: "medium")
     ]
     static func find(_ id: String) -> RecommendedModel? { all.first { $0.id == id } }
     static func selectedModel(defaults: UserDefaults = .standard) -> String {

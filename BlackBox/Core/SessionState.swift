@@ -5,6 +5,16 @@ enum AgentMode: String, CaseIterable, Identifiable {
     case ask = "Ask Before Command"
     case autonomous = "Autonomous"
     var id: String { rawValue }
+    var assistantInstructions: String {
+        switch self {
+        case .manual:
+            return "Observe mode: inspect and explain only. Never call a terminal-writing tool. Suggest commands for the user to run."
+        case .ask:
+            return "Ask Before Command mode: call the appropriate terminal tool for actions requested by the user. BlackBox presents its own approval control before each action; do not ask for permission in chat first. Approval for typed command text also covers its immediate Return when the terminal remains unchanged."
+        case .autonomous:
+            return "Autonomous mode: the user has authorized terminal actions needed for their request. Call the appropriate tool and proceed without asking for permission in chat, including for routine inspection commands such as listing files. Do not ask 'May I run' or wait for a yes before using tools. Ask only when essential details are missing or the requested action is outside the user's stated goal."
+        }
+    }
 }
 
 struct SessionState: Codable {

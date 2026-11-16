@@ -52,7 +52,7 @@ private struct ModelPickerList: View {
         self.selected = selected
         self.choose = choose
         _catalog = StateObject(wrappedValue: ModelCatalog(provider: provider, fetchModels: {
-            let key = provider == .openRouter ? nil : try KeychainStore.read(for: provider)
+            let key = provider == .openRouter ? nil : try CredentialStore.shared.read(for: provider)
             return try await ProviderModelCatalogClient().fetch(provider: provider, key: key)
         }))
     }
@@ -137,7 +137,7 @@ private struct ModelPickerList: View {
                     Spacer(minLength: 0)
                 }.padding(8).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(model.unavailableReason != nil)
-                .help(model.unavailableReason ?? "Use \(model.id)")
+                .help(model.unavailableReason.map { "\($0) · Model ID: \(model.id)" } ?? "Model ID: \(model.id)")
             Button { catalog.toggleFavorite(model.id) } label: {
                 Image(systemName: isFavorite ? "star.fill" : "star")
                     .foregroundStyle(isFavorite ? Color.yellow : Color.secondary)

@@ -13,6 +13,8 @@ struct SettingsView: View {
     @ObservedObject var agent: AgentSession
     @Environment(\.dismiss) private var dismiss
     @State private var model = ""
+    @ObservedObject private var credentials = CredentialStore.shared
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -21,8 +23,14 @@ struct SettingsView: View {
                 Spacer()
                 Text("\(agent.configuredProviders.count) of 3 configured").foregroundStyle(.secondary)
             }
-            Text("Keys are stored separately in macOS Keychain. Choose which provider receives your chat and terminal context.")
+            Text(credentials.usesPortableKeys ? "Using encrypted portable keys. Choose which provider receives your chat and terminal context." : "Keys are stored separately in macOS Keychain. Choose which provider receives your chat and terminal context.")
                 .font(.callout).foregroundStyle(.secondary)
+            HStack {
+                Label(credentials.usesPortableKeys ? (credentials.isUnlocked ? "Portable keys unlocked" : "Portable keys locked") : "macOS Keychain", systemImage: "key.fill")
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Portable Keys…") { openWindow(id: "portable-keys") }.disabled(agent.isBusy)
+            }
             HStack {
                 Picker("Use provider", selection: $agent.provider) {
                     ForEach(AIProvider.allCases) { Text($0.name).tag($0) }
@@ -59,6 +67,7 @@ struct SettingsView: View {
         .padding(24)
         .frame(width: 570)
         .fixedSize(horizontal: false, vertical: true)
+        .onChange(of: credentials.revision) { _, _ in agent.refreshProviderConfiguration() }
         .onAppear { model = agent.model; agent.refreshProviderConfiguration() }
         .onChange(of: agent.provider) { _, _ in model = agent.model }
     }
@@ -73,6 +82,7 @@ struct SettingsView: View {
 private struct ProviderKeyRow: View {
     @ObservedObject var agent: AgentSession
     let provider: AIProvider
+    @ObservedObject private var credentials = CredentialStore.shared
     @State private var apiKey = ""
     @State private var message: String?
     @State private var succeeded = false
@@ -88,11 +98,11 @@ private struct ProviderKeyRow: View {
                 Spacer()
                 ProviderStatusLabel(configured: configured)
             }
-            Text(configured ? "API key saved in Keychain." : "Add your \(provider.name) API key to use this provider.")
+            Text(configured ? (credentials.usesPortableKeys ? "API key saved in portable file." : "API key saved in Keychain.") : "Add your \(provider.name) API key to use this provider.")
                 .font(.caption).foregroundStyle(.secondary)
             SecureField(configured ? "Enter a replacement API key" : "\(provider.name) API key", text: $apiKey)
                 .textFieldStyle(.roundedBorder)
-                .disabled(isTesting)
+                .disabled(isTesting || (credentials.usesPortableKeys && !credentials.isUnlocked))
                 .onChange(of: apiKey) { _, _ in message = nil; succeeded = false }
             HStack {
                 Button("Save key", action: saveKey).disabled(entered.isEmpty || isTesting || agent.isBusy)
@@ -114,11 +124,14 @@ private struct ProviderKeyRow: View {
         }
         .padding(14)
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        .onChange(of: credentials.revision) { _, _ in
+            apiKey = ""; message = nil; succeeded = false; testTask?.cancel()
+        }
         .onDisappear { testTask?.cancel() }
     }
     private func saveKey() {
         do {
-            try KeychainStore.save(entered, for: provider)
+            try CredentialStore.shared.save(entered, for: provider)
             apiKey = ""
             agent.refreshProviderConfiguration()
             succeeded = false
@@ -127,7 +140,7 @@ private struct ProviderKeyRow: View {
     }
     private func removeKey() {
         do {
-            try KeychainStore.delete(for: provider)
+            try CredentialStore.shared.delete(for: provider)
             apiKey = ""
             agent.refreshProviderConfiguration()
             message = nil
@@ -138,7 +151,7 @@ private struct ProviderKeyRow: View {
         let key: String
         let testingUnsavedKey = !entered.isEmpty
         do {
-            key = try entered.isEmpty ? (KeychainStore.read(for: provider) ?? "") : entered
+            key = try entered.isEmpty ? (CredentialStore.shared.read(for: provider) ?? "") : entered
             guard !key.isEmpty else { message = "Enter an API key first."; return }
         } catch { succeeded = false; message = error.localizedDescription; return }
         let model = agent.provider == provider ? agent.model : provider.selectedModel()

@@ -12,3 +12,6 @@ dist/
 *.p8
 *.mobileprovision
 *.provisionprofile
+
+# Personal encrypted portable credentials
+*.keys

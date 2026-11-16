@@ -8,7 +8,15 @@ BlackBox is a native macOS terminal app with an AI assistant for local command-l
 
 ## Install
 
-Download the latest app from [GitHub Releases](https://github.com/mingistech/BlackBox/releases), unzip it, and drag BlackBox into Applications. Version 1.1 requires **macOS 26.6 or later** and supports Apple silicon and Intel Macs. Bring your own OpenRouter, OpenAI, or Anthropic API key; provider usage is billed separately.
+Download the latest app from [GitHub Releases](https://github.com/mingistech/BlackBox/releases), unzip it, and drag BlackBox into Applications. Version 1.2 requires **macOS 26.6 or later** and supports Apple silicon and Intel Macs. Bring your own OpenRouter, OpenAI, or Anthropic API key; provider usage is billed separately.
+
+## Portable API keys
+
+In **Settings → Portable Keys…**, choose **Create Portable Keys…**, enter and confirm a passphrase of at least 8 characters, and save `BlackBox.keys` beside `BlackBox.app` on your SSD. You can optionally copy saved keys from this Mac’s Keychain, or add keys in provider Settings after creating the file. Keychain entries are retained on this Mac.
+
+Carry both files together. BlackBox detects the adjacent key file and opens the unlock window at launch. Unlock once per app session; provider reads, saves, removals, and connection tests then use that file. If macOS translocates the app to a temporary launch location, choose **Open Key File…** and select the file on the SSD. **Lock portable keys** clears the unlocked vault from app state; **Use Keychain for This Session** explicitly switches back to local storage. Switching storage is disabled while the assistant is busy. Already-started requests may retain their key until complete.
+
+The file uses AES-256-GCM authenticated encryption and PBKDF2-HMAC-SHA256 (600,000 iterations, random 16-byte salt). The passphrase and derived key are not stored on disk. Keep a backup of the encrypted file and remember the passphrase; there is no passphrase recovery. Portable keys are never written inside the signed app bundle. Replacing the app during updates leaves the separate key file intact. On a new Mac, model selections and other preferences start with that Mac’s defaults; the keys are portable. Macs must meet the app’s minimum macOS version and may display normal first-run privacy prompts.
 
 ## Updates
 

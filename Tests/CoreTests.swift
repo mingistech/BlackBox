@@ -23,6 +23,15 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(TerminalHeuristics.sshDestination(arguments: "/usr/bin/ssh -p 2222 -i /tmp/key alice@host"), "alice@host")
         XCTAssertEqual(TerminalHeuristics.sshDestination(arguments: "ssh -J bastion -l alice alias"), "alias")
     }
+    func testModeInstructionsMatchToolPermissions() {
+        XCTAssertTrue(AgentMode.autonomous.assistantInstructions.contains("without asking for permission in chat"))
+        XCTAssertTrue(AgentMode.ask.assistantInstructions.contains("approval control"))
+        XCTAssertTrue(AgentMode.manual.assistantInstructions.contains("Never call a terminal-writing tool"))
+        let writable = OpenRouterClient.tools(mode: .autonomous).compactMap { ($0["function"] as? [String: Any])?["name"] as? String }
+        XCTAssertTrue(writable.contains("send_text"))
+        XCTAssertTrue(writable.contains("send_key"))
+    }
+
     func testManualToolSurfaceIsReadOnly() {
         let names = OpenRouterClient.tools(mode: .manual).compactMap { ($0["function"] as? [String: Any])?["name"] as? String }
         XCTAssertEqual(Set(names), Set(["read_terminal", "get_session_state"]))
