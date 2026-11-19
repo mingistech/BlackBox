@@ -14,6 +14,7 @@ enum RecommendedModels {
         .init(id: defaultID, name: "Qwen3 Coder", role: "Everyday coding · Default", maxTokens: 4096, reasoningEffort: nil),
         .init(id: "anthropic/claude-sonnet-5", name: "Sonnet 5", role: "Everyday tasks and troubleshooting", maxTokens: 4096, reasoningEffort: "medium"),
         .init(id: "deepseek/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", role: "Quick checks and lower cost", maxTokens: 4096, reasoningEffort: "low"),
+        .init(id: "openai/gpt-6.2-astra", name: "GPT-6.2 Astra", role: "Hard problems and deep troubleshooting", maxTokens: 8192, reasoningEffort: "medium"),
         .init(id: "openai/gpt-6-astra", name: "GPT-6 Astra", role: "Hard problems and deep troubleshooting", maxTokens: 8192, reasoningEffort: "medium")
     ]
     static func find(_ id: String) -> RecommendedModel? { all.first { $0.id == id } }

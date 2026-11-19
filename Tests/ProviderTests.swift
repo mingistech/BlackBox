@@ -61,14 +61,14 @@ final class ProviderTests: XCTestCase {
         let defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }
         let router = ModelCatalog(defaults: defaults)
-        router.toggleFavorite("openai/gpt-6-astra")
-        let direct = ModelCatalog(defaults: defaults, provider: .openAI, fetchModels: { [OpenRouterModel(id: "gpt-6-astra", name: "Astra"), OpenRouterModel(id: "gpt-4.1", name: "GPT 4.1")] })
+        router.toggleFavorite("openai/gpt-6.2-astra")
+        let direct = ModelCatalog(defaults: defaults, provider: .openAI, fetchModels: { [OpenRouterModel(id: "gpt-6.2-astra", name: "Astra"), OpenRouterModel(id: "gpt-4.1", name: "GPT 4.1")] })
         await direct.refresh()
         XCTAssertTrue(direct.favorites.isEmpty)
-        XCTAssertEqual(direct.choices(selected: "gpt-6-astra", search: "").map(\.id), ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"])
-        direct.toggleFavorite("gpt-6-astra")
-        XCTAssertEqual(router.favorites, ["openai/gpt-6-astra"])
-        XCTAssertEqual(ModelCatalog(defaults: defaults, provider: .openAI).favorites, ["gpt-6-astra"])
+        XCTAssertEqual(direct.choices(selected: "gpt-6.2-astra", search: "").map(\.id), ["gpt-6.2-astra", "gpt-6-astra", "gpt-6.2-sol", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"])
+        direct.toggleFavorite("gpt-6.2-astra")
+        XCTAssertEqual(router.favorites, ["openai/gpt-6.2-astra"])
+        XCTAssertEqual(ModelCatalog(defaults: defaults, provider: .openAI).favorites, ["gpt-6.2-astra"])
         XCTAssertEqual(ModelCatalog(defaults: defaults, provider: .anthropic).choices(selected: "claude-sonnet-5-5", search: "").map(\.id), ["claude-sonnet-5-5", "claude-fable-5-2", "claude-opus-5-5", "claude-haiku-5-5"])
     }
 
@@ -97,10 +97,10 @@ final class ProviderTests: XCTestCase {
             return (200, ["status": "completed", "output": [["type": "message", "role": "assistant", "content": [["type": "output_text", "text": "Done."]]]]])
         }
         let messages = [APIMessage(role: "system", content: "System"), APIMessage(role: "user", content: "Check")]
-        let first = try await client.complete(provider: .openAI, key: "openai-test", model: "gpt-6-astra", messages: messages, mode: .ask)
+        let first = try await client.complete(provider: .openAI, key: "openai-test", model: "gpt-6.2-astra", messages: messages, mode: .ask)
         XCTAssertEqual(first.tool_calls?.first?.id, "call_actual")
         XCTAssertFalse((first.content ?? "").contains("opaque-openai"))
-        let second = try await client.complete(provider: .openAI, key: "openai-test", model: "gpt-6-astra", messages: messages + [first, APIMessage(role: "tool", content: "fixture result", tool_call_id: "call_actual")], mode: .ask)
+        let second = try await client.complete(provider: .openAI, key: "openai-test", model: "gpt-6.2-astra", messages: messages + [first, APIMessage(role: "tool", content: "fixture result", tool_call_id: "call_actual")], mode: .ask)
         XCTAssertEqual(second.content, "Done.")
     }
 
@@ -199,16 +199,25 @@ final class ProviderTests: XCTestCase {
 }
 
 extension ProviderTests {
-    func testCoreModelPreferenceMigration() {
+    @MainActor func testCoreModelPreferenceMigration() {
         let suite = "CoreModelMigration.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("gpt-6-astra", forKey: "openAIModel")
+        XCTAssertEqual(AIProvider.openAI.selectedModel(defaults: defaults), "gpt-6-astra")
+        defaults.set("gpt-6.1-sol", forKey: "openAIModel")
+        XCTAssertEqual(AIProvider.openAI.selectedModel(defaults: defaults), "gpt-6.1-sol")
         defaults.set("gpt-5.6-sol", forKey: "openAIModel")
         defaults.set("claude-fable-5-1", forKey: "anthropicModel")
         XCTAssertEqual(AIProvider.openAI.selectedModel(defaults: defaults), "gpt-6.1-sol")
         XCTAssertEqual(AIProvider.anthropic.selectedModel(defaults: defaults), "claude-fable-5-2")
         defaults.set("custom-model", forKey: "openAIModel")
         XCTAssertEqual(AIProvider.openAI.selectedModel(defaults: defaults), "gpt-6-astra")
+        defaults.set("openai/gpt-6-astra", forKey: "openRouterModel")
+        defaults.set(["openai/gpt-6-astra", "openai/gpt-6.1-sol"], forKey: "openRouterFavoriteModels")
+        XCTAssertEqual(AIProvider.openRouter.selectedModel(defaults: defaults), "openai/gpt-6-astra")
+        let router = ModelCatalog(defaults: defaults, provider: .openRouter)
+        XCTAssertEqual(router.favorites, ["openai/gpt-6-astra", "openai/gpt-6.1-sol"])
         defaults.set("custom/router", forKey: "openRouterModel")
         XCTAssertEqual(AIProvider.openRouter.selectedModel(defaults: defaults), "custom/router")
     }

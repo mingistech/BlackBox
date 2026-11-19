@@ -32,7 +32,7 @@ final class ProviderCatalogTests: XCTestCase {
             XCTAssertNil(request.httpBody)
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer fixture-openai")
             XCTAssertNil(request.value(forHTTPHeaderField: "x-api-key"))
-            return (200, ["data": [["id": "gpt-6-astra"], ["id": "gpt-4.1"], ["id": "gpt-image-1"], ["id": "text-embedding-3-small"], ["id": "new-future-model"]]])
+            return (200, ["data": [["id": "gpt-6.2-astra"], ["id": "gpt-4.1"], ["id": "gpt-image-1"], ["id": "text-embedding-3-small"], ["id": "new-future-model"]]])
         }
         let models = try await ProviderModelCatalogClient(session: session).fetch(provider: .openAI, key: "fixture-openai")
         XCTAssertEqual(models.count, 5)
@@ -81,22 +81,32 @@ final class ProviderCatalogTests: XCTestCase {
         let suite = "OpenAIShortlistTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
-        let expected = ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"]
-        let models = [OpenRouterModel(id: "gpt-6-astra", name: "Astra"), OpenRouterModel(id: "gpt-4.1-mini", name: "Mini")]
+        let expected = ["gpt-6.2-astra", "gpt-6-astra", "gpt-6.2-sol", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"]
+        let models = [OpenRouterModel(id: "gpt-6.2-astra", name: "Astra"), OpenRouterModel(id: "gpt-4.1-mini", name: "Mini")]
         let catalog = ModelCatalog(defaults: defaults, provider: .openAI, fetchModels: { models })
-        XCTAssertEqual(catalog.choices(selected: "gpt-6-astra", search: "").map(\.id), expected)
+        XCTAssertEqual(catalog.choices(selected: "gpt-6.2-astra", search: "").map(\.id), expected)
         await catalog.refresh()
         catalog.toggleFavorite("gpt-4.1-mini")
         XCTAssertEqual(catalog.choices(selected: "gpt-4.1-mini", search: "", showAll: true).map(\.id), expected)
         catalog.toggleFavorite("gpt-6-luna")
         let starredOrder = ["gpt-6-luna"] + expected.filter { $0 != "gpt-6-luna" }
-        XCTAssertEqual(catalog.choices(selected: "gpt-6-astra", search: "").map(\.id), starredOrder)
-        XCTAssertEqual(catalog.choices(selected: "gpt-6-astra", search: "terra").map(\.id), ["gpt-6.1-terra"])
+        XCTAssertEqual(catalog.choices(selected: "gpt-6.2-astra", search: "").map(\.id), starredOrder)
+        XCTAssertEqual(catalog.choices(selected: "gpt-6.2-astra", search: "terra").map(\.id), ["gpt-6.1-terra"])
         let offline = ModelCatalog(defaults: defaults, provider: .openAI, fetchModels: { throw URLError(.notConnectedToInternet) })
         await offline.refresh()
         XCTAssertNotNil(offline.error)
         XCTAssertEqual(offline.choices(selected: "custom-model", search: "").map(\.id), starredOrder)
         XCTAssertTrue(offline.choices(selected: "custom-model", search: "custom").isEmpty)
+    }
+
+    @MainActor func testOpenAIFavoritesPreserveOlderModels() {
+        let suite = "OpenAIFavoritesMigration.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(["gpt-6-astra", "gpt-6.1-sol"], forKey: "openAIFavoriteModels")
+        let catalog = ModelCatalog(defaults: defaults, provider: .openAI)
+        XCTAssertEqual(catalog.favorites, ["gpt-6-astra", "gpt-6.1-sol"])
+        XCTAssertEqual(Set(defaults.stringArray(forKey: "openAIFavoriteModels") ?? []), catalog.favorites)
     }
 
     @MainActor func testAnthropicShortlistExcludesExtrasAndCachesSeparatelyWithFavoritesFirst() async {

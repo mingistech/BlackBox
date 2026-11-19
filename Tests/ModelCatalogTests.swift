@@ -65,7 +65,7 @@ final class ModelCatalogTests: XCTestCase {
         await catalog.refresh()
         XCTAssertEqual(RecommendedModels.selectedModel(defaults: defaults), "qwen/qwen3-coder")
         XCTAssertEqual(catalog.choices(selected: RecommendedModels.defaultID, search: "").map(\.id), RecommendedModels.all.map(\.id))
-        XCTAssertEqual(catalog.choices(selected: RecommendedModels.defaultID, search: "", showAll: true).count, 6)
+        XCTAssertEqual(catalog.choices(selected: RecommendedModels.defaultID, search: "", showAll: true).count, RecommendedModels.all.count + 2)
         catalog.toggleFavorite(Self.zeta.id)
         XCTAssertEqual(catalog.choices(selected: RecommendedModels.defaultID, search: "").first?.id, Self.zeta.id)
         defaults.set(Self.alpha.id, forKey: "openRouterModel")

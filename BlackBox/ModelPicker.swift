@@ -103,7 +103,7 @@ private struct ModelPickerList: View {
                     .toggleStyle(.checkbox).font(.caption).padding(.horizontal, 12).padding(.top, 10)
             } else {
                 Text(catalog.provider == .openAI
-                     ? "Four OpenAI models available in this picker."
+                     ? "Six OpenAI models available in this picker."
                      : "Four Anthropic models available in this picker.")
                     .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 12).padding(.top, 10)
             }

@@ -24,7 +24,9 @@ enum AIProvider: String, CaseIterable, Codable, Identifiable {
         if self == .openRouter { return RecommendedModels.all }
         if self == .openAI {
             return [
+                ("gpt-6.2-astra", "GPT-6.2 Astra", "Hard problems and deep troubleshooting"),
                 ("gpt-6-astra", "GPT-6 Astra", "Hard problems and deep troubleshooting"),
+                ("gpt-6.2-sol", "GPT-6.2 Sol", "Complex tasks and coding"),
                 ("gpt-6.1-sol", "GPT-6.1 Sol", "Complex tasks and coding"),
                 ("gpt-6.1-terra", "GPT-6.1 Terra", "Everyday tasks and clear explanations"),
                 ("gpt-6-luna", "GPT-6 Luna", "Quick checks and lowest cost")
